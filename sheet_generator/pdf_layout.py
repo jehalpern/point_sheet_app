@@ -1,6 +1,9 @@
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
+import qrcode
+from io import BytesIO
+from reportlab.lib.utils import ImageReader
 
 def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
     margin = 0.2 * inch
@@ -70,6 +73,24 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
     offset_table_left = table_left - .15 * inch 
     offset_table_width = table_width + 0.15 * inch
     c.rect(offset_table_left, table_top - table_height, offset_table_width, table_height, stroke=1, fill=0)
+
+    # Example student_id and date (replace with actual values as needed)
+    student_id = "12345678"
+    date_str = "2024-07-08"
+
+    # Generate QR code data
+    qr_data = f"{student_id}|{date_str}"
+    qr = qrcode.make(qr_data)
+    qr_buffer = BytesIO()
+    qr.save(qr_buffer, format="PNG")
+    qr_buffer.seek(0)
+    qr_img = ImageReader(qr_buffer)
+
+    # Position QR code to the right of the table and make it 15% bigger
+    qr_size = 0.4 * inch * 1.5  # % bigger
+    qr_x = table_left + table_width + 0.25 * inch  # a bit of space to the right of the table
+    qr_y = table_top - qr_size  # align top of QR with top of table
+    c.drawImage(qr_img, qr_x, qr_y, qr_size, qr_size)
 
 def generate_pdf(filename="Optimized_Point_Sheet.pdf"):
     c = canvas.Canvas(filename, pagesize=landscape(letter))
