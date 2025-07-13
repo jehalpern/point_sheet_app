@@ -27,8 +27,8 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
     c.setFont("Helvetica-Bold", 10)
     c.drawCentredString(origin_x + width / 2, origin_y + height - margin - 0.1 * inch, "Check-in Check-out")
     c.setFont("Helvetica", 8)
-    c.drawString(origin_x + margin, origin_y + height - margin - 0.4 * inch, "Name: ____________________")
-    c.drawString(origin_x + width / 2, origin_y + height - margin - 0.4 * inch, "Date: ____________________")
+    c.drawString(origin_x + margin, origin_y + height - margin - 0.4 * inch, "Name: test_student Adam") 
+    c.drawString(origin_x + width / 2, origin_y + height - margin - 0.4 * inch, "Date: 2025-07-12")
 
     # Table origin
     start_y = origin_y + height - margin - 1.0 * inch
@@ -75,8 +75,8 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
     c.rect(offset_table_left, table_top - table_height, offset_table_width, table_height, stroke=1, fill=0)
 
     # Example student_id and date (replace with actual values as needed)
-    student_id = "12345678"
-    date_str = "2024-07-08"
+    student_id = "ada3bd21"
+    date_str = "2025-07-12"
 
     # Generate QR code data
     qr_data = f"{student_id}|{date_str}"
