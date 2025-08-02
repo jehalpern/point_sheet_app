@@ -33,17 +33,25 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
     table_width = (len(time_blocks)) * col_width + 1.19 * inch * scale
     table_height = len(behaviors) * row_height + 0.48 * inch * scale
 
-    # Draw ArUco markers
+    # Draw ArUco markers in corners
     marker_size = square_size
     positions = [
         (table_left - marker_size, table_top),                            # Top-left
-        (table_left + table_width, table_top),                            # Top-right
+        (table_left + table_width, table_top),                           # Top-right
         (table_left - marker_size, table_top - table_height - marker_size),  # Bottom-left
         (table_left + table_width, table_top - table_height - marker_size)   # Bottom-right
     ]
     for i, (x, y) in enumerate(positions):
         marker = generate_aruco_marker(marker_id=i, size_pixels=200)
         c.drawImage(marker, x, y, marker_size, marker_size)
+
+    # Add ArUco markers for each row
+    for row_idx in range(len(behaviors)):
+        row_y = table_top - (row_idx + 1) * row_height
+        marker_left = generate_aruco_marker(marker_id=10 + row_idx, size_pixels=100)
+        marker_right = generate_aruco_marker(marker_id=20 + row_idx, size_pixels=100)
+        c.drawImage(marker_left, table_left - marker_size * 1.2, row_y + marker_size / 2, marker_size, marker_size)
+        c.drawImage(marker_right, table_left + table_width + marker_size * 0.2, row_y + marker_size / 2, marker_size, marker_size)
 
     # Header
     c.setFont("Helvetica-Bold", 14)
@@ -77,6 +85,8 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
     table_width = (len(time_blocks)) * col_width + 1.0 * inch * scale
     table_height = len(behaviors) * row_height + 0.4 * inch * scale
 
+    c.setLineWidth(2.5)  # Make gridlines bold and thicker
+
     for i in range(len(behaviors) + 1):
         y = table_top - i * row_height + grid_y_offset
         c.line(table_left + grid_x_offset, y, table_left + table_width, y)
@@ -85,26 +95,15 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
         x = table_left + i * col_width + grid_x_offset
         c.line(x, table_top + grid_y_offset, x, table_top - table_height + grid_y_offset)
 
-    c.setLineWidth(1)
+    # Table border (can be even thicker if you want)
+    c.setLineWidth(3)
     offset_table_left = table_left - .15 * inch * scale
     offset_table_width = table_width + 0.15 * inch * scale
     c.rect(offset_table_left, table_top - table_height, offset_table_width, table_height, stroke=1, fill=0)
 
-    # QR Code
-    student_id = "ada3bd21"
-    date_str = "2025-07-12"
-    qr_data = f"{student_id}|{date_str}"
-    qr = qrcode.make(qr_data)
-    qr_buffer = BytesIO()
-    qr.save(qr_buffer, format="PNG")
-    qr_buffer.seek(0)
-    qr_img = ImageReader(qr_buffer)
-    qr_size = 0.3 * inch * 3.9 * scale
-    qr_x = table_left + table_width + .25 * inch * scale
-    qr_y = table_top - qr_size - .4 * inch * scale
-    c.drawImage(qr_img, qr_x, qr_y, qr_size, qr_size)
+   
 
-def generate_pdf(filename="Optimized_Point_Sheet_Aruco.pdf"):
+def generate_pdf(filename="Optimized_Point_Sheet_Aruco_Rows.pdf"):
     c = canvas.Canvas(filename, pagesize=landscape(letter))
     sheet_width = landscape(letter)[0]
     sheet_height = landscape(letter)[1] / 2
