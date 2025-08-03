@@ -1,63 +1,73 @@
-import cv2
 import os
+import subprocess
+from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
-from datetime import datetime
 
 # === CONFIG ===
-SAVE_DIR = "captured_images"
-FOCUS_VALUE = 35  # 3.5 mapped to 35 for V4L2 (0–255 scale)
+PHOTO_DIR = Path("photo_stills")
+PHOTO_DIR.mkdir(exist_ok=True)
 
-# Create folder if not exists
-os.makedirs(SAVE_DIR, exist_ok=True)
+# Get the next available handw_### filename
+def get_next_filename():
+    existing = list(PHOTO_DIR.glob("handw_*.jpg"))
+    numbers = []
+    for file in existing:
+        try:
+            num = int(file.stem.split("_")[1])
+            numbers.append(num)
+        except (IndexError, ValueError):
+            continue
+    next_num = max(numbers, default=0) + 1
+    return PHOTO_DIR / f"handw_{next_num:03d}.jpg"
 
-# === CAMERA SETUP ===
-cap = cv2.VideoCapture(0)  # use 0 for default camera
+# Capture image using libcamera-still
+def take_photo():
+    global photo_preview
 
-# Set manual focus (if supported)
-cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-cap.set(cv2.CAP_PROP_FOCUS, FOCUS_VALUE)
+    save_path = get_next_filename()
+    cmd = [
+        'libcamera-still',
+        '--lens-position', '3.5',
+        '-o', str(save_path),
+        '--timeout', '1000',
+        '--nopreview'  # Prevent native preview from stealing focus
+    ]
+    subprocess.run(cmd)
+
+    # Show preview
+    try:
+        img = Image.open(save_path)
+        img.thumbnail((400, 400))
+        img_tk = ImageTk.PhotoImage(img)
+        photo_preview.config(image=img_tk)
+        photo_preview.image = img_tk
+        messagebox.showinfo("Photo Captured", f"Saved to {save_path.name}")
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not preview image:\n{e}")
 
 # === GUI SETUP ===
-window = tk.Tk()
-window.title("Point Sheet Image Capture")
+root = tk.Tk()
+root.title("Capture Photo")
+root.geometry("500x600")
+root.configure(bg="#f0f0f0")
 
-# Live preview label
-preview_label = tk.Label(window)
-preview_label.pack()
+# Label for preview
+photo_preview = tk.Label(root, text="Preview will appear here", bg="#dcdcdc", width=400, height=300)
+photo_preview.pack(pady=20)
 
-# Function to update live feed
-def update_frame():
-    ret, frame = cap.read()
-    if ret:
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(rgb)
-        imgtk = ImageTk.PhotoImage(image=img)
-        preview_label.imgtk = imgtk
-        preview_label.configure(image=imgtk)
-    window.after(10, update_frame)
+# Styled button
+take_btn = tk.Button(
+    root,
+    text="📸 Take Photo",
+    font=("Arial", 24, "bold"),
+    bg="#4CAF50",
+    fg="white",
+    padx=20,
+    pady=10,
+    command=take_photo
+)
+take_btn.pack(pady=20)
 
-# Save image to disk
-def take_photo():
-    ret, frame = cap.read()
-    if ret:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"photo_{timestamp}.png"
-        path = os.path.join(SAVE_DIR, filename)
-        cv2.imwrite(path, frame)
-        messagebox.showinfo("Photo Saved", f"Saved as {filename}")
-    else:
-        messagebox.showerror("Error", "Failed to capture image")
-
-# Take Photo Button
-btn = tk.Button(window, text="📸 Take Photo", font=("Arial", 24), bg="green", fg="white", command=take_photo)
-btn.pack(pady=10)
-
-# Start the loop
-update_frame()
-window.mainloop()
-
-# Release on exit
-cap.release()
-cv2.destroyAllWindows()
+root.mainloop()
