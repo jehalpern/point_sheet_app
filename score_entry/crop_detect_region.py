@@ -72,17 +72,18 @@ def detect_score_cells(image):
     edged = cv2.Canny(blur, 50, 150)
 
     contours, _ = cv2.findContours(edged, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
     raw_boxes = []
 
     for cnt in contours:
         approx = cv2.approxPolyDP(cnt, 0.02 * cv2.arcLength(cnt, True), True)
         if len(approx) == 4 and cv2.isContourConvex(approx):
             x, y, w, h = cv2.boundingRect(approx)
-            aspect_ratio = w / float(h)
-            area = cv2.contourArea(cnt)
-            if 300 < area < 3000 and 0.5 < aspect_ratio < 2.5:
+            area = w * h
+            if 35000 <= area <= 45000:
                 raw_boxes.append((x, y, w, h))
 
+    # === Deduplication using IoU ===
     def iou(box1, box2):
         x1, y1, w1, h1 = box1
         x2, y2, w2, h2 = box2
@@ -100,47 +101,18 @@ def detect_score_cells(image):
         if all(iou(box, kept) < 0.4 for kept in deduped):
             deduped.append(box)
 
-    for (x, y, w, h) in deduped:
-        cv2.rectangle(output, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        roi = gray[y:y + h, x:x + w]
-        roi = cv2.resize(roi, (w * 3, h * 3), interpolation=cv2.INTER_LINEAR)
-        roi = cv2.GaussianBlur(roi, (3, 3), 0)
-        _, roi_thresh = cv2.threshold(roi, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        config = r'--psm 10 -c tessedit_char_whitelist=012'
-        digit = pytesseract.image_to_string(roi_thresh, config=config).strip()
-        if digit:
-            cv2.putText(output, digit[0], (x + 3, y + h - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
-        print(f"Box at ({x}, {y}) — Width: {w}, Height: {h}, Area: {w*h} Digit: {digit}")
+    print(f"✅ Unique rectangles found: {len(deduped)}")
 
-    print(f"✅ Final deduplicated box count: {len(deduped)}")
-    deduped.sort(key=lambda b: (b[1], b[0]))
-    clusters = []
-    used_indices = set()
-    for i in range(len(deduped) - 2):
-        if i in used_indices:
-            continue
-        x0, y0, w0, h0 = deduped[i]
-        x1, y1, w1, h1 = deduped[i+1]
-        x2, y2, w2, h2 = deduped[i+2]
-        if abs(y0 - y1) < 15 and abs(y1 - y2) < 15:
-            x_min = min(x0, x1, x2)
-            y_min = min(y0, y1, y2)
-            x_max = max(x0 + w0, x1 + w1, x2 + w2)
-            y_max = max(y0 + h0, y1 + h1, y2 + h2)
-            clusters.append((x_min, y_min, x_max - x_min, y_max - y_min))
-            used_indices.update({i, i+1, i+2})
-
-    single_cells = [box for idx, box in enumerate(deduped) if idx not in used_indices]
-
-    for (x, y, w, h) in single_cells:
-        cv2.rectangle(output, (x, y), (x + w, y + h), (0, 255, 0), 1)
-
-    for (x, y, w, h) in clusters:
+    # === Draw and display each ROI ===
+    for i, (x, y, w, h) in enumerate(deduped):
+        area = w * h
         cv2.rectangle(output, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        roi = image[y:y+h, x:x+w]
+        roi_resized = cv2.resize(roi, (150, 150), interpolation=cv2.INTER_LINEAR)  # optional
+        cv2.imshow(f"Cropped Box {i+1}", roi_resized)
 
-    print(f"🟩 Single cell boxes: {len(single_cells)}")
-    print(f"🔵 Clustered 3-cell boxes: {len(clusters)}")
     return output
+
 
 def select_and_process_image():
     path = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg *.jpeg *.png")])

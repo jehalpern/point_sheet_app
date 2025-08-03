@@ -36,10 +36,10 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
     # Draw ArUco markers
     marker_size = square_size
     positions = [
-        (table_left - marker_size, table_top),                            # Top-left
-        (table_left + table_width, table_top),                            # Top-right
-        (table_left - marker_size, table_top - table_height - marker_size),  # Bottom-left
-        (table_left + table_width, table_top - table_height - marker_size)   # Bottom-right
+        (table_left - marker_size + 1.2 * inch, table_top - 0.46 * inch),                            # Top-left
+        (table_left + table_width + 0.03 * inch, table_top - 0.46 * inch),               # Top-right (moved right)
+        (table_left - marker_size + 1.2 * inch, table_top - table_height - marker_size - 0.046 * inch),  # Bottom-left (moved down)
+        (table_left + table_width, table_top - table_height - marker_size - 0.01 * inch)   # Bottom-right
     ]
     for i, (x, y) in enumerate(positions):
         marker = generate_aruco_marker(marker_id=i, size_pixels=200)
@@ -65,8 +65,7 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
         c.drawString(origin_x + table_x_offset + 0.01 * width, y + box_size / 2, behavior)
         for col_idx in range(len(time_blocks)):
             for score_idx, score in enumerate(score_options):
-                x = origin_x + table_x_offset + 1.3 * inch * scale + col_idx * col_width + score_idx * (box_size + 1 * scale)
-                c.rect(x, y, box_size, box_size)
+                x = origin_x + table_x_offset + 1.2 * inch * scale + col_idx * col_width + score_idx * (box_size + 8 * scale)
                 c.drawCentredString(x + box_size / 2, y + box_size / 4, score)
 
     # Grid
@@ -77,6 +76,8 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
     table_width = (len(time_blocks)) * col_width + 1.0 * inch * scale
     table_height = len(behaviors) * row_height + 0.4 * inch * scale
 
+    c.setLineWidth(2.5)  # Make all grid lines bold
+
     for i in range(len(behaviors) + 1):
         y = table_top - i * row_height + grid_y_offset
         c.line(table_left + grid_x_offset, y, table_left + table_width, y)
@@ -85,7 +86,7 @@ def draw_point_sheet(c, origin_x, origin_y, width=letter[0], height=letter[1]):
         x = table_left + i * col_width + grid_x_offset
         c.line(x, table_top + grid_y_offset, x, table_top - table_height + grid_y_offset)
 
-    c.setLineWidth(1)
+    c.setLineWidth(2.5)  # Make border bold as well
     offset_table_left = table_left - .15 * inch * scale
     offset_table_width = table_width + 0.15 * inch * scale
     c.rect(offset_table_left, table_top - table_height, offset_table_width, table_height, stroke=1, fill=0)
